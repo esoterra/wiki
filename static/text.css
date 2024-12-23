@@ -1,0 +1,30 @@
+html {
+    font-family: Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif; 
+    font-size: 1.2em;
+    color: #381D2A;
+    text-rendering: optimizeLegibility;
+}
+
+h1 {
+    font-weight: 700;
+    font-size: 150%;
+    margin-bottom: 24px;
+}
+
+h2 {
+    font-weight: 700;
+    font-size: 100%;
+    margin-bottom: 18px;
+}
+
+h3 {
+    color: #6D606F;
+    font-weight: 700;
+    font-size: 100%;
+    margin-bottom: 16px;
+}
+
+a, a:visited {
+    color: #BA5624;
+    text-decoration: none;
+}
