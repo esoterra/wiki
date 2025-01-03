@@ -114,33 +114,43 @@ function updateDocumentAttributes(editorRoot) {
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/beforeinput_event
-function beforeInputListener(e) {
+function beforeInputListener(event) {
     console.log("beforeinput:")
-    console.log(e)
+    console.log(event)
 
-    const targetTag = e.target.tagName;
-    if (e.inputType === "insertParagraph") {
+    const target = event.target;
+    const targetTag = event.target.tagName;
+    const targetContent = event.target.textContent;
+    const data = event.data;
+    if (event.inputType === "insertParagraph") {
+        if (isListItem(target)) {
+            if (targetContent === "") {
+                splitList(target)
+                event.preventDefault();
+                return;
+            }
+        }
         const newTag = targetTag.startsWith("H") ? "P" : targetTag;
         const newElement = document.createElement(newTag)
         newElement.spellcheck = true
         newElement.contentEditable = true
-        e.target.after(newElement)
+        event.target.after(newElement)
         document.getSelection().setPosition(newElement)
-        e.preventDefault()
+        event.preventDefault()
         return;
     }
-    if (e.inputType === "deleteContentBackward") {
-        if (e.target.textContent === "") {
-            const prev = e.target.previousElementSibling;
+    if (event.inputType === "deleteContentBackward") {
+        if (event.target.textContent === "") {
+            const prev = event.target.previousElementSibling;
             document.getSelection().setPosition(prev)
-            e.target.remove()
-            e.preventDefault()
+            event.target.remove()
+            event.preventDefault()
             return;
         }
     }
-    if (e.inputType === "insertText") {
-        if (targetTag === P_TAG && e.target.textContent === "*" && e.data === " ") {
-            const prev = e.target.previousElementSibling;
+    if (event.inputType === "insertText") {
+        if (targetTag === P_TAG && targetContent === "*" && data === " ") {
+            const prev = event.target.previousElementSibling;
             // Create and insert new list
             const newList = document.createElement("UL");
             prev.after(newList);
@@ -151,51 +161,100 @@ function beforeInputListener(e) {
             newList.appendChild(newListItem)
             // Focus new list item and remove old tag
             document.getSelection().setPosition(newListItem)
-            e.target.remove()
-            e.preventDefault()
+            event.target.remove()
+            event.preventDefault()
             return;
         }
-        if (targetTag === P_TAG && e.target.textContent === "1." && e.data === " ") {
-            const prev = e.target.previousElementSibling;
+        if (targetTag === P_TAG && targetContent === "1." && data === " ") {
+            const prev = event.target.previousElementSibling;
             // Create and insert new list
-            const newList = document.createElement("OL");
+            const newList = document.createElement(OL_TAG);
             prev.after(newList);
             // Create and insert new list item
-            const newListItem = document.createElement("LI");
+            const newListItem = document.createElement(LI_TAG);
             newListItem.spellcheck = true
             newListItem.contentEditable = true
             newList.appendChild(newListItem)
             // Focus new list item and remove old tag
             document.getSelection().setPosition(newListItem)
-            e.target.remove()
-            e.preventDefault()
+            event.target.remove()
+            event.preventDefault()
             return;
         }
     }
+}
+
+function splitList(element) {
+    const parentList = element.parentElement;
+    // Add all elements after this one in the list to the `after` list and remove them from the parent
+    let current = element.nextElementSibling;
+    const remainder = [];
+    while (current != null) {
+        remainder.push(current)
+        current = current.nextElementSibling;
+    }
+    // Create and select the new paragraph element
+    element.remove()
+    const newParagraph = document.createElement(P_TAG);
+    newParagraph.spellcheck = true
+    newParagraph.contentEditable = true
+    parentList.after(newParagraph);
+    document.getSelection().setPosition(newParagraph)
+    // Create the list for the remainder
+    const newList = document.createElement(parentList.tagName);
+    for (const current of remainder) {
+        newList.appendChild(current)
+    }
+    newParagraph.after(newList)
 }
 
 function keydownListener(event) {
     console.log("keydown:")
     console.log(event)
 
+    const target = event.target;
     const selection = document.getSelection();
     if (event.key === "ArrowUp") {
-        const atStart = true;
-        if (atStart) {
-            const prev = prevEditable(event.target);
-            selection.setPosition(prev)
-            scrollToIfNeeded(prev)
-            event.preventDefault()
+        if (selection.rangeCount === 1) {
+            const selectionRange = selection.getRangeAt(0);
+            const comparison = selectionRange.comparePoint(target.firstChild, 0);
+            if (comparison === 0) {
+                const prev = prevEditable(event.target);
+                if (prev === null) {
+                    return;
+                }
+                if (prev.lastChild !== null) {
+                    selection.setPosition(prev.lastChild, prev.lastChild.length)
+                } else {
+                    selection.setPosition(prev)
+                }
+                scrollToIfNeeded(prev)
+                event.preventDefault()
+            }
         }
     }
     if (event.key === "ArrowDown") {
-        const atEnd = true;
-        if (atEnd) {
-            const next = nextEditable(event.target);
-            selection.setPosition(next)
-            scrollToIfNeeded(next)
-            event.preventDefault()
+        if (selection.rangeCount === 1) {
+            const selectionRange = selection.getRangeAt(0);
+            const comparison = selectionRange.comparePoint(target.lastChild, target.lastChild.length);
+            if (comparison === 0) {
+                const next = nextEditable(event.target);
+                if (next === null) {
+                    return;
+                }
+                selection.setPosition(next)
+                scrollToIfNeeded(next)
+                event.preventDefault()
+            }
         }
+    }
+    if (event.key === "Tab") {
+        if (event.shiftKey) {
+            console.log("TODO: Indent List")
+        } else {
+            console.log("TODO: Dedent List")
+        }
+        event.preventDefault()
     }
 }
 
