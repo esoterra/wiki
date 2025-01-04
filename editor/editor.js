@@ -214,39 +214,25 @@ function keydownListener(event) {
 
     const target = event.target;
     const selection = document.getSelection();
-    if (event.key === "ArrowUp") {
-        if (selection.rangeCount === 1) {
-            const selectionRange = selection.getRangeAt(0);
-            const comparison = selectionRange.comparePoint(target.firstChild, 0);
-            if (comparison === 0) {
-                const prev = prevEditable(event.target);
-                if (prev === null) {
-                    return;
-                }
-                if (prev.lastChild !== null) {
-                    selection.setPosition(prev.lastChild, prev.lastChild.length)
-                } else {
-                    selection.setPosition(prev)
-                }
-                scrollToIfNeeded(prev)
-                event.preventDefault()
-            }
+    if (event.key === "ArrowUp" && atStart(event)) {
+        const prev = prevEditable(target);
+        if (prev === null) {
+            return;
         }
+        selectEnd(prev)
+        scrollToIfNeeded(prev)
+        event.preventDefault()
+        return;
     }
-    if (event.key === "ArrowDown") {
-        if (selection.rangeCount === 1) {
-            const selectionRange = selection.getRangeAt(0);
-            const comparison = selectionRange.comparePoint(target.lastChild, target.lastChild.length);
-            if (comparison === 0) {
-                const next = nextEditable(event.target);
-                if (next === null) {
-                    return;
-                }
-                selection.setPosition(next)
-                scrollToIfNeeded(next)
-                event.preventDefault()
-            }
+    if (event.key === "ArrowDown" && atEnd(event)) {
+        const next = nextEditable(event.target);
+        if (next === null) {
+            return;
         }
+        selection.setPosition(next)
+        scrollToIfNeeded(next)
+        event.preventDefault()
+        return;
     }
     if (event.key === "Tab") {
         if (event.shiftKey) {
@@ -256,6 +242,50 @@ function keydownListener(event) {
         }
         event.preventDefault()
     }
+}
+
+function atStart(event) {
+    if (event.target.textContent == "") {
+        return true;
+    }
+    const selection = document.getSelection();
+    if (selection.rangeCount === 1) {
+        const selectionRange = selection.getRangeAt(0);
+        return selectionRange.startOffset === 0;
+    }
+    console.warn("More than one selection!!")
+    return false;
+}
+
+function atEnd(event) {
+    const target = event.target;
+    if (target.textContent === "") {
+        return true;
+    }
+    const selection = document.getSelection();
+    if (selection.rangeCount === 1) {
+        const selectionRange = selection.getRangeAt(0);
+        const comparison = selectionRange.comparePoint(target.lastChild, target.lastChild.length);
+        return comparison === 0;
+    }
+    return false;
+}
+
+function selectEnd(element) {
+    const selection = document.getSelection();
+    if (element.textContent === "") {
+        console.log("selecting end of empty which is just the whole thing")
+        selection.setPosition(element)
+        return;
+    }
+    if (element.lastChild !== null) {
+        console.log("selecting the end of the lastChild")
+        console.log(element)
+        console.log(element.lastChild)
+        selection.setPosition(element.lastChild, element.lastChild.length)
+        return;
+    }
+    selection.setPosition(element)
 }
 
 function scrollToIfNeeded(element) {
