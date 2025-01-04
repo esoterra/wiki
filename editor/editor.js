@@ -141,8 +141,8 @@ function beforeInputListener(event) {
     }
     if (event.inputType === "deleteContentBackward") {
         if (event.target.textContent === "") {
-            const prev = event.target.previousElementSibling;
-            document.getSelection().setPosition(prev)
+            const prev = prevEditable(event.target);
+            selectEnd(prev)
             event.target.remove()
             event.preventDefault()
             return;
@@ -150,38 +150,31 @@ function beforeInputListener(event) {
     }
     if (event.inputType === "insertText") {
         if (targetTag === P_TAG && targetContent === "*" && data === " ") {
-            const prev = event.target.previousElementSibling;
-            // Create and insert new list
-            const newList = document.createElement("UL");
-            prev.after(newList);
-            // Create and insert new list item
-            const newListItem = document.createElement("LI");
-            newListItem.spellcheck = true
-            newListItem.contentEditable = true
-            newList.appendChild(newListItem)
-            // Focus new list item and remove old tag
-            document.getSelection().setPosition(newListItem)
-            event.target.remove()
+            transmuteIntoList(event, UL_TAG);
             event.preventDefault()
             return;
         }
         if (targetTag === P_TAG && targetContent === "1." && data === " ") {
-            const prev = event.target.previousElementSibling;
-            // Create and insert new list
-            const newList = document.createElement(OL_TAG);
-            prev.after(newList);
-            // Create and insert new list item
-            const newListItem = document.createElement(LI_TAG);
-            newListItem.spellcheck = true
-            newListItem.contentEditable = true
-            newList.appendChild(newListItem)
-            // Focus new list item and remove old tag
-            document.getSelection().setPosition(newListItem)
-            event.target.remove()
+            transmuteIntoList(event, OL_TAG);
             event.preventDefault()
             return;
         }
     }
+}
+
+function transmuteIntoList(event, tagName) {
+    const prev = event.target.previousElementSibling;
+    // Create and insert new list
+    const newList = document.createElement(tagName);
+    prev.after(newList);
+    // Create and insert new list item
+    const newListItem = document.createElement(LI_TAG);
+    newListItem.spellcheck = true
+    newListItem.contentEditable = true
+    newList.appendChild(newListItem)
+    // Focus new list item and remove old tag
+    document.getSelection().setPosition(newListItem)
+    event.target.remove()
 }
 
 function splitList(element) {
@@ -274,14 +267,10 @@ function atEnd(event) {
 function selectEnd(element) {
     const selection = document.getSelection();
     if (element.textContent === "") {
-        console.log("selecting end of empty which is just the whole thing")
         selection.setPosition(element)
         return;
     }
     if (element.lastChild !== null) {
-        console.log("selecting the end of the lastChild")
-        console.log(element)
-        console.log(element.lastChild)
         selection.setPosition(element.lastChild, element.lastChild.length)
         return;
     }
