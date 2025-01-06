@@ -75,6 +75,17 @@ class Context {
     }
 }
 
+function init(editorRoot, idPrefix) {
+    console.log("init start");
+    const ctx = new Context(editorRoot, idPrefix)
+    console.log(ctx)
+    validateDocument(ctx);
+    updateDocumentAttributes(ctx);
+    editorRoot.addEventListener("beforeinput", (event) => beforeInputListener(ctx, event));
+    editorRoot.addEventListener("keydown", (event) => keydownListener(ctx, event));
+    console.log("init finished");
+}
+
 function validateDocument(ctx) {
     const editorRoot = ctx.editorRoot;
     const invalidElements = [];
@@ -142,14 +153,13 @@ function beforeInputListener(ctx, event) {
     if (event.inputType === "insertParagraph") {
         if (isListItem(target)) {
             if (targetContent === "") {
-                splitList(ctx, target);
+                dedentListItem(ctx, target);
                 event.preventDefault();
                 return;
             }
         }
         const newTag = isHeading(target) ? P_TAG : targetTag;
         const newElement = ctx.newElement(newTag);
-        console.log({ newTag, newElement });
         target.after(newElement);
         document.getSelection().setPosition(newElement);
         event.preventDefault();
@@ -185,41 +195,7 @@ function beforeInputListener(ctx, event) {
     }
 }
 
-function transmuteIntoList(ctx, event, tagName) {
-    // Create and insert new list
-    const newList = ctx.newElement(tagName);
-    event.target.replaceWith(newList);
-    // Create and insert new list item
-    const newListItem = ctx.newElement(LI_TAG);
-    newList.appendChild(newListItem);
-    // Focus new list item and remove old tag
-    document.getSelection().setPosition(newListItem);
-    event.target.remove();
-}
-
-function splitList(ctx, element) {
-    const parentList = element.parentElement;
-    // Add all elements after this one in the list to the `after` list and remove them from the parent
-    let current = element.nextElementSibling;
-    const remainder = [];
-    while (current != null) {
-        remainder.push(current)
-        current = current.nextElementSibling;
-    }
-    // Create and select the new paragraph element
-    element.remove();
-    const newParagraph = ctx.newElement(P_TAG);
-    parentList.after(newParagraph);
-    document.getSelection().setPosition(newParagraph);
-    // Create the list for the remainder
-    const newList = ctx.newElement(parentList.tagName);
-    for (const current of remainder) {
-        newList.appendChild(current);
-    }
-    newParagraph.after(newList);
-}
-
-function keydownListener(event) {
+function keydownListener(ctx, event) {
     console.log("keydown:");
     console.log(event);
 
@@ -246,13 +222,62 @@ function keydownListener(event) {
         return;
     }
     if (event.key === "Tab") {
-        if (event.shiftKey) {
-            console.log("TODO: Indent List");
-        } else {
-            console.log("TODO: Dedent List");
+        if (isListItem(target)) {
+            if (event.shiftKey) {
+                dedentListItem(ctx, target)
+            } else {
+                const newElement = ctx.newElement(target.parentElement.tagName);
+                target.before(newElement)
+                newElement.appendChild(target);
+                selection.setPosition(target);
+            }
         }
         event.preventDefault();
+        return;
     }
+}
+
+function transmuteIntoList(ctx, event, tagName) {
+    // Create and insert new list
+    const newList = ctx.newElement(tagName);
+    event.target.replaceWith(newList);
+    // Create and insert new list item
+    const newListItem = ctx.newElement(LI_TAG);
+    newList.appendChild(newListItem);
+    // Focus new list item and remove old tag
+    document.getSelection().setPosition(newListItem);
+    event.target.remove();
+}
+
+function dedentListItem(ctx, element) {
+    const parentList = element.parentElement;
+    // Add all elements after this one in the list to the `after` list and remove them from the parent
+    let current = element.nextElementSibling;
+    const remainder = [];
+    while (current != null) {
+        remainder.push(current)
+        current = current.nextElementSibling;
+    }
+    // Create and select the new paragraph element
+    const parentParent = parentList.parentElement;
+    const newTag = isContainer(parentParent)? P_TAG : LI_TAG;
+    const newElement = ctx.newElement(newTag);
+    newElement.innerHTML = element.innerHTML;
+    element.remove();
+    parentList.after(newElement);
+    document.getSelection().setPosition(newElement);
+    // Create the list for the remainder
+    if (remainder.length !== 0) {
+        const newList = ctx.newElement(parentList.tagName);
+        for (const current of remainder) {
+            newList.appendChild(current);
+        }
+        newElement.after(newList);
+    }
+    if (parentList.childElementCount === 0) {
+        parentList.remove();
+    }
+    return newElement;
 }
 
 function atStart(event) {
@@ -312,6 +337,7 @@ function prevEditable(element) {
     }
     return prevFromSectionChild(element);
 }
+
 function prevFromSectionChild(element) {
     const prevSectionChild = element.previousElementSibling;
     if (prevSectionChild !== null) {
@@ -327,6 +353,7 @@ function prevFromSectionChild(element) {
     }
     return null;
 }
+
 function lastSectionDescendent(element) {
     const lastItem = element.lastElementChild;
     if (isSection(lastItem)) {
@@ -348,6 +375,7 @@ function nextEditable(element) {
     }
     return nextFromSectionChild(element);
 }
+
 function nextFromSectionChild(element) {
     const nextSectionChild = element.nextElementSibling;
     if (nextSectionChild !== null) {
@@ -362,15 +390,4 @@ function nextFromSectionChild(element) {
         return nextFromSectionChild(parent);
     }
     return null;
-}
-
-function init(editorRoot, idPrefix) {
-    console.log("init start");
-    const ctx = new Context(editorRoot, idPrefix)
-    console.log(ctx)
-    validateDocument(ctx);
-    updateDocumentAttributes(ctx);
-    editorRoot.addEventListener("beforeinput", (event) => beforeInputListener(ctx, event));
-    editorRoot.addEventListener("keydown", keydownListener);
-    console.log("init finished");
 }
