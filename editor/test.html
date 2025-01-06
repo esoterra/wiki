@@ -7,7 +7,15 @@
     <link rel="stylesheet" href="./reset.css">
     <link rel="stylesheet" href="./layout.css">
     <link rel="stylesheet" href="./text.css">
-    <script src="editor.js"></script> 
+    <script src="editor.js"></script>
+    <script type="text/javascript">
+    const onload = () => {
+        const editorRoot = document.getElementById("wedit-root");
+        const idPrefix = "wedit-";
+        init(editorRoot, idPrefix)
+    };
+    document.addEventListener('DOMContentLoaded', onload, true);
+    </script>
 </head>
 
 <body>

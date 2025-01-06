@@ -40,6 +40,16 @@ a, a:visited {
     text-decoration: none;
 }
 
+a::before {
+    content: "[";
+    color: gray;
+}
+
+a::after {
+    content: "]";
+    color: gray;
+}
+
 ul, ol {
     margin-left: 30px;
 }
