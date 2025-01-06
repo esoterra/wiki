@@ -2,8 +2,12 @@
 
 ## TODO
 
-[ ] Nested lists
+[X] Nested lists
+[ ] Splitting/joining paragraphs and list items
 [ ] Creating sections
+[ ] Figures
+[ ] Links
+[ ] Bold/Italic/Code
 [ ] Moving nodes
 
 ## References

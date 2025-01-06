@@ -161,14 +161,14 @@ function beforeInputListener(ctx, event) {
         const newTag = isHeading(target) ? P_TAG : targetTag;
         const newElement = ctx.newElement(newTag);
         target.after(newElement);
-        document.getSelection().setPosition(newElement);
+        selectElement(newElement);
         event.preventDefault();
         return;
     }
     if (event.inputType === "deleteContentBackward") {
         if (targetContent === "") {
             const prev = prevEditable(event.target);
-            selectEnd(prev);
+            selectElementEnd(prev);
             if (isListItem(target) && target.parentElement.childElementCount === 1) {
                 target.parentElement.remove();
             } else {
@@ -200,13 +200,12 @@ function keydownListener(ctx, event) {
     console.log(event);
 
     const target = event.target;
-    const selection = document.getSelection();
     if (event.key === "ArrowUp" && atStart(event)) {
         const prev = prevEditable(target);
         if (prev === null) {
             return;
         }
-        selectEnd(prev);
+        selectElementEnd(prev);
         scrollToIfNeeded(prev);
         event.preventDefault();
         return;
@@ -216,7 +215,7 @@ function keydownListener(ctx, event) {
         if (next === null) {
             return;
         }
-        selection.setPosition(next);
+        selectElement(next);
         scrollToIfNeeded(next);
         event.preventDefault();
         return;
@@ -229,7 +228,7 @@ function keydownListener(ctx, event) {
                 const newElement = ctx.newElement(target.parentElement.tagName);
                 target.before(newElement)
                 newElement.appendChild(target);
-                selection.setPosition(target);
+                selectElement(target);
             }
         }
         event.preventDefault();
@@ -245,7 +244,7 @@ function transmuteIntoList(ctx, event, tagName) {
     const newListItem = ctx.newElement(LI_TAG);
     newList.appendChild(newListItem);
     // Focus new list item and remove old tag
-    document.getSelection().setPosition(newListItem);
+    selectElement(newListItem);
     event.target.remove();
 }
 
@@ -265,7 +264,7 @@ function dedentListItem(ctx, element) {
     newElement.innerHTML = element.innerHTML;
     element.remove();
     parentList.after(newElement);
-    document.getSelection().setPosition(newElement);
+    selectElement(newElement);
     // Create the list for the remainder
     if (remainder.length !== 0) {
         const newList = ctx.newElement(parentList.tagName);
@@ -284,10 +283,9 @@ function atStart(event) {
     if (event.target.textContent == "") {
         return true;
     }
-    const selection = document.getSelection();
-    if (selection.rangeCount === 1) {
-        const selectionRange = selection.getRangeAt(0);
-        return selectionRange.startOffset === 0;
+    const range = selectionRange();
+    if (range !== null) {
+        return range.startOffset === 0;
     }
     console.warn("More than one selection!!");
     return false;
@@ -298,26 +296,12 @@ function atEnd(event) {
     if (target.textContent === "") {
         return true;
     }
-    const selection = document.getSelection();
-    if (selection.rangeCount === 1) {
-        const selectionRange = selection.getRangeAt(0);
-        const comparison = selectionRange.comparePoint(target.lastChild, target.lastChild.length);
+    const range = selectionRange();
+    if (range !== null) {
+        const comparison = range.comparePoint(target.lastChild, target.lastChild.length);
         return comparison === 0;
     }
     return false;
-}
-
-function selectEnd(element) {
-    const selection = document.getSelection();
-    if (element.textContent === "") {
-        selection.setPosition(element);
-        return;
-    }
-    if (element.lastChild !== null) {
-        selection.setPosition(element.lastChild, element.lastChild.length);
-        return;
-    }
-    selection.setPosition(element);
 }
 
 function scrollToIfNeeded(element) {
@@ -388,6 +372,30 @@ function nextFromSectionChild(element) {
     const parentParent = parent.parentElement;
     if (isContainer(parentParent)) {
         return nextFromSectionChild(parent);
+    }
+    return null;
+}
+
+function selectElementEnd(element) {
+    if (element.textContent === "") {
+        selectElement(element);
+        return;
+    }
+    if (element.lastChild !== null) {
+        document.getSelection().setPosition(element.lastChild, element.lastChild.length)
+        return;
+    }
+    selectElement(element);
+}
+
+function selectElement(element) {
+    document.getSelection().setPosition(element);
+}
+
+function selectionRange() {
+    const selection = document.getSelection();
+    if (selection.rangeCount === 1) {
+        return selection.getRangeAt(0)
     }
     return null;
 }
